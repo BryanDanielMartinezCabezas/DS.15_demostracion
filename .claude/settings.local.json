@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:5601/health)",
+      "Bash(curl -s http://localhost:8080/login)",
+      "Bash(git init *)"
+    ]
+  }
+}

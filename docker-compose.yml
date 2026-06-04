@@ -1,0 +1,60 @@
+networks:
+  ds517net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
+
+services:
+
+  attacker:
+    image: kalilinux/kali-rolling
+    container_name: attacker
+    hostname: attacker
+    networks:
+      ds517net:
+        ipv4_address: 172.29.0.10
+    volumes:
+      - ./attacker:/scripts
+    tty: true
+    stdin_open: true
+    command: /bin/bash
+
+  siem:
+    build: ./siem
+    container_name: siem
+    hostname: siem
+    networks:
+      ds517net:
+        ipv4_address: 172.29.0.30
+    ports:
+      - "5601:5601"
+    tty: true
+    stdin_open: true
+
+  victim:
+    build: ./victim
+    container_name: victim
+    hostname: victim
+    networks:
+      ds517net:
+        ipv4_address: 172.29.0.20
+    depends_on:
+      - siem
+    tty: true
+    stdin_open: true
+
+  admin:
+    build: ./admin
+    container_name: admin
+    hostname: admin
+    networks:
+      ds517net:
+        ipv4_address: 172.29.0.40
+    ports:
+      - "8080:8080"
+    depends_on:
+      - siem
+      - victim
+    tty: true
+    stdin_open: true
