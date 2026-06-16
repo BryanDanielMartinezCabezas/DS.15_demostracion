@@ -72,17 +72,30 @@ Frase destacada al pie: **"Cada capa asume que la anterior ya fue comprometida."
 
 ## SLIDE 5 — Mapa de los 4 controles
 
-Título: **4 ataques · 4 controles**
+Título: **4 ataques · 4 controles · 1 principio DS5.17**
 Imagen: diagrama kill chain horizontal con las 4 fases (ya proporcionada).
 
-Tabla de dos columnas:
+Para cada control mostrar: nombre, qué es, para qué sirve y qué ataque detiene.
 
-| El ataque | El control DS5.17 |
-|-----------|-------------------|
-| Robé tu contraseña | MFA — código TOTP cada 30 s |
-| Apago el antivirus | Tamper Protection — el EDR se protege a sí mismo |
-| Borro las huellas | Hash Chain SHA-256 — cadena de evidencia incorruptible |
-| Robo la base de datos | Consultas parametrizadas — el motor ignora código del atacante |
+**Control 1 — Autenticación Multi-Factor (MFA)**
+Qué es: mecanismo que exige dos pruebas de identidad para conceder acceso.
+Para qué sirve: garantizar que conocer la contraseña no sea suficiente para entrar.
+Qué detiene: acceso no autorizado aunque el atacante tenga las credenciales.
+
+**Control 2 — Tamper Protection (Protección contra manipulación)**
+Qué es: capacidad del propio antivirus (EDR) de rechazar órdenes de apagado no autorizadas.
+Para qué sirve: evitar que el malware desactive la protección antes de actuar.
+Qué detiene: el primer paso de cualquier ataque avanzado — silenciar el EDR.
+
+**Control 3 — Integridad de Logs (Hash Chain SHA-256)**
+Qué es: sistema que sella cada registro de eventos con una firma matemática encadenada.
+Para qué sirve: garantizar que la evidencia forense no pueda ser alterada sin que se note.
+Qué detiene: la manipulación de logs para borrar huellas de una intrusión.
+
+**Control 4 — Consultas Parametrizadas (Anti-inyección SQL)**
+Qué es: técnica de programación que separa el código SQL del dato ingresado por el usuario.
+Para qué sirve: evitar que un atacante use campos de búsqueda como comandos hacia la base de datos.
+Qué detiene: el robo masivo de registros sin credenciales mediante inyección SQL.
 
 ---
 
