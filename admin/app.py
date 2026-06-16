@@ -18,6 +18,22 @@ SIEM_URL = "http://siem:5601"
 DATABASE_URL = "http://database:5050"
 
 
+def log_to_siem(event_type, message, severity="INFO"):
+    try:
+        requests.post(
+            f"{SIEM_URL}/log",
+            json={
+                "source": "Admin-Console@admin(172.29.0.40)",
+                "type": event_type,
+                "message": message,
+                "severity": severity,
+            },
+            timeout=3,
+        )
+    except Exception:
+        pass
+
+
 # ──────────────────────────────── HTML ────────────────────────────────
 
 LOGIN_HTML = """<!DOCTYPE html>
@@ -400,15 +416,36 @@ def login():
 
         totp = pyotp.TOTP(TOTP_SECRET)
 
+        attacker_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         if username != USERNAME or password != PASSWORD:
             error = "❌ Credenciales incorrectas"
+            log_to_siem(
+                "LOGIN_FAILED_CREDENTIALS",
+                f"Intento de acceso con credenciales incorrectas | Usuario: '{username}' | Origen: {attacker_ip}",
+                "WARNING",
+            )
         elif not totp_code:
             error = "❌ Falta el código MFA (TOTP). Segundo factor requerido."
+            log_to_siem(
+                "LOGIN_FAILED_MFA",
+                f"Credenciales correctas pero sin código MFA | Usuario: '{username}' | Origen: {attacker_ip}",
+                "CRITICAL",
+            )
         elif not totp.verify(totp_code, valid_window=1):
             error = f"❌ Código MFA inválido: '{totp_code}'. Los códigos TOTP expiran cada 30 s."
+            log_to_siem(
+                "LOGIN_FAILED_MFA",
+                f"Credenciales correctas pero código TOTP inválido: '{totp_code}' | Origen: {attacker_ip}",
+                "CRITICAL",
+            )
         else:
             session["logged_in"] = True
             session["user"] = username
+            log_to_siem(
+                "LOGIN_SUCCESS",
+                f"Acceso concedido a la Consola de Seguridad | Usuario: '{username}' | MFA verificado | Origen: {attacker_ip}",
+                "INFO",
+            )
             return redirect(url_for("dashboard"))
 
     return render_template_string(LOGIN_HTML, error=error)
@@ -423,10 +460,22 @@ def login_api():
 
     totp = pyotp.TOTP(TOTP_SECRET)
 
+    attacker_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+
     if username != USERNAME or password != PASSWORD:
+        log_to_siem(
+            "LOGIN_FAILED_CREDENTIALS",
+            f"Intento de acceso con credenciales incorrectas | Usuario: '{username}' | Origen: {attacker_ip}",
+            "WARNING",
+        )
         return jsonify({"status": "DENEGADO", "motivo": "Credenciales incorrectas"}), 401
 
     if not totp_code:
+        log_to_siem(
+            "LOGIN_FAILED_MFA",
+            f"Credenciales correctas pero sin código MFA | Usuario: '{username}' | Origen: {attacker_ip} | Defensa MFA activa",
+            "CRITICAL",
+        )
         return (
             jsonify(
                 {
@@ -439,6 +488,11 @@ def login_api():
         )
 
     if not totp.verify(totp_code, valid_window=1):
+        log_to_siem(
+            "LOGIN_FAILED_MFA",
+            f"Código TOTP inválido: '{totp_code}' | Usuario: '{username}' | Origen: {attacker_ip}",
+            "CRITICAL",
+        )
         return (
             jsonify(
                 {
@@ -450,6 +504,11 @@ def login_api():
             401,
         )
 
+    log_to_siem(
+        "LOGIN_SUCCESS",
+        f"Acceso concedido a la Consola de Seguridad | Usuario: '{username}' | MFA verificado | Origen: {attacker_ip}",
+        "INFO",
+    )
     return jsonify(
         {
             "status": "CONCEDIDO",
@@ -510,6 +569,8 @@ def set_db_protection():
 
 @app.route("/logout")
 def logout():
+    user = session.get("user", "desconocido")
+    log_to_siem("LOGOUT", f"Sesión cerrada | Usuario: '{user}'", "INFO")
     session.clear()
     return redirect(url_for("login"))
 
