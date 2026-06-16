@@ -1,215 +1,181 @@
-# DS5.17 — Defensa en Profundidad
-# Guion de diapositivas · Estilo conferencia universitaria
-# USFX — Universidad San Francisco Xavier de Chuquisaca
+# Brief para generación de presentación — DS5.17 COBIT
+# Instrucciones para NotebookLM
+
+Genera una presentación de 10 diapositivas sobre el control COBIT DS5.17
+"Defensa en Profundidad" para una conferencia universitaria en la USFX Bolivia.
+Paleta oscura: fondo #0d1117, texto blanco, azul #58a6ff, verde #3fb950, rojo #f85149.
+Tipografía grande. Mínimo texto visible. El orador habla el resto.
 
 ---
 
 ## SLIDE 1 — Portada
 
-```
-[IMAGEN: escudo digital de fondo]
-
-        Defensa en Profundidad
-   Control DS5.17 COBIT · USFX 2026
-
-        [Nombre del presentador]
-```
-
-> Orador: "Hoy vamos a atacar un sistema universitario en vivo, frente a ustedes.
-> Sin trucos. Sin grabaciones. Y vamos a ver exactamente qué lo detiene."
+Título principal: **Defensa en Profundidad**
+Subtítulo: **Control DS5.17 COBIT · USFX 2026**
+Pie de página: nombre del presentador y fecha.
+Imagen de fondo: escudo digital con circuitos (ya proporcionada).
 
 ---
 
-## SLIDE 2 — DS5.17 en una frase
+## SLIDE 2 — El control DS5.17
 
-```
-   ┌─────────────────────────────────────────┐
-   │                                         │
-   │   "Los mecanismos de seguridad          │
-   │    deben protegerse a sí mismos."       │
-   │                                         │
-   │              — COBIT DS5.17             │
-   └─────────────────────────────────────────┘
+Muestra esta cita centrada en pantalla, tipografía grande, como elemento principal:
 
-   No alcanza con tener antivirus.
-   Hay que proteger el antivirus.
-```
+> "Los mecanismos de seguridad deben protegerse a sí mismos."
+> — COBIT DS5.17
 
-> Orador: "DS5.17 no habla de proteger datos.
-> Habla de proteger las herramientas que protegen los datos.
-> Es un nivel más adentro."
+Debajo, tres bullets cortos:
+- No alcanza con tener antivirus — hay que proteger el antivirus
+- No alcanza con tener logs — hay que garantizar que no se falsifiquen
+- No alcanza con tener base de datos — hay que proteger cómo se consulta
 
 ---
 
 ## SLIDE 3 — El sistema objetivo
 
-```
-   [CAPTURA: portal SUNIVER — login naranja]
+Título: **¿Qué estamos protegiendo?**
+Imagen: captura del portal SUNIVER (login con topbar naranja).
 
-   ¿Qué protegemos?
-
-   · Portal estudiantil USFX
-   · Expedientes · Calificaciones · Credenciales DTIC
-   · Un atacante dentro de la red puede robar todo
-     sin una sola contraseña
-```
-
-> Orador: "Este es el sistema que el atacante quiere comprometer.
-> El objetivo: expedientes de estudiantes y el token secreto del DTIC."
+Tres bullets:
+- Portal estudiantil USFX — expedientes, calificaciones, matrículas
+- Administrado por el DTIC — contiene credenciales de acceso interno
+- Un atacante dentro de la red puede robar todo sin contraseña
 
 ---
 
-## SLIDE 4 — La metáfora
+## SLIDE 4 — La metáfora de las capas
 
-```
-   [IMAGEN: diagrama de capas concéntricas]
+Título: **El castillo medieval tenía capas**
+Imagen central: diagrama de capas concéntricas (ya proporcionada).
 
-   El castillo medieval tenía capas.
+Analogía a mostrar en pantalla:
+- Foso → Firewall
+- Muralla → Autenticación MFA
+- Torre de guardia → Antivirus / EDR
+- Cámara del tesoro → Base de datos
 
-        Foso → Muralla → Guardias → Tesoro
-
-   Cada capa asume que la anterior ya fue rota.
-```
-
-> Orador: "Si el atacante cruza el foso, todavía enfrenta la muralla.
-> Si la rompe, todavía hay guardias adentro.
-> Eso es defensa en profundidad."
+Frase destacada al pie: **"Cada capa asume que la anterior ya fue comprometida."**
 
 ---
 
-## SLIDE 5 — Las 4 capas
+## SLIDE 5 — Mapa de los 4 controles
 
-```
-   [IMAGEN: kill chain timeline — 4 fases]
+Título: **4 ataques · 4 controles**
+Imagen: diagrama kill chain horizontal con las 4 fases (ya proporcionada).
 
-   Ataque          →    Control DS5.17
-   ─────────────────────────────────────
-   Robé tu contraseña   →   MFA · TOTP
-   Apago el antivirus   →   Tamper Protection
-   Borro las huellas    →   Hash Chain SHA-256
-   Robo la base datos   →   Consultas parametrizadas
-```
+Tabla de dos columnas:
 
-> Orador: "Cuatro intentos del atacante. Cuatro defensas distintas.
-> Cada fila es lo que vamos a demostrar ahora."
+| El ataque | El control DS5.17 |
+|-----------|-------------------|
+| Robé tu contraseña | MFA — código TOTP cada 30 s |
+| Apago el antivirus | Tamper Protection — el EDR se protege a sí mismo |
+| Borro las huellas | Hash Chain SHA-256 — cadena de evidencia incorruptible |
+| Robo la base de datos | Consultas parametrizadas — el motor ignora código del atacante |
 
 ---
 
-## SLIDE 6 — Fase 1 · MFA
+## SLIDE 6 — Fase 1: Autenticación MFA
 
-```
-   Autenticación Multi-Factor
+Título: **"Tengo tu contraseña. ¿Y ahora?"**
 
-   Amenaza:   El atacante tiene usuario y contraseña
-   Analogía:  Cajero ATM — tarjeta robada + PIN desconocido
-   Defensa:   Código TOTP · cambia cada 30 segundos
+Estructura de la diapositiva en tres bloques:
 
-   [CAPTURA: respuesta JSON "status": "DENEGADO"]
+**Amenaza:** El atacante obtuvo usuario y contraseña por phishing o filtración.
+Con solo eso debería poder entrar al panel de control del sistema.
 
-   Resultado: BLOQUEADO
-```
+**Analogía:** Como un cajero automático — tener la tarjeta robada no alcanza.
+También necesitás el PIN. El atacante tiene la tarjeta, no sabe el PIN.
 
-> Orador: "El atacante hizo todo bien. Consiguió las credenciales.
-> Pero hay un segundo cerrojo que no puede calcular en tiempo real."
+**Defensa:** Código TOTP generado por algoritmo matemático usando un secreto
+compartido más la hora actual. Cambia cada 30 segundos.
+Sin el secreto físico, es imposible calcularlo.
 
----
-
-## SLIDE 7 — Fase 2 · Tamper Protection
-
-```
-   Protección del EDR
-
-   Amenaza:   El malware intenta apagar el antivirus
-   Analogía:  Sereno con instrucciones escritas del dueño —
-              solo obedece órdenes del director en persona
-   Defensa:   El EDR rechaza la señal · alerta CRITICAL en SIEM
-
-   [CAPTURA: "status": "BLOCKED" + alerta roja en SIEM]
-
-   Con protección: BLOQUEADO
-   Sin protección: el EDR cae
-```
-
-> Orador: "El 90% del ransomware real desactiva el antivirus primero.
-> Con DS5.17, ese intento queda registrado como evidencia."
+Captura a insertar: terminal mostrando `"status": "DENEGADO"`.
+Etiqueta en verde: **BLOQUEADO ✓**
 
 ---
 
-## SLIDE 8 — Fase 3 · Hash Chain
+## SLIDE 7 — Fase 2: Tamper Protection
 
-```
-   Integridad de Logs
+Título: **"Lo primero: apagar el antivirus"**
 
-   Amenaza:   El atacante edita el SIEM para borrar sus huellas
-   Analogía:  Libro de actas universitario — páginas numeradas
-              y selladas. Arrancás una hoja y los números no cuadran.
-   Defensa:   Cada log lleva el hash del anterior (SHA-256)
-              Modificar uno rompe toda la cadena
+Estructura en tres bloques:
 
-   [CAPTURA: dashboard SIEM con ❌ ROTO en rojo]
+**Amenaza:** El 90% del ransomware real desactiva el antivirus antes de ejecutarse.
+Si el EDR cae, el atacante puede actuar sin ser detectado.
 
-   Resultado: DETECTADO
-```
+**Analogía:** Como un sereno con instrucciones escritas del dueño:
+"Solo obedecé órdenes de apagado si el director viene en persona con su CI."
+Cualquier llamada por teléfono diciendo "soy el jefe, andate" — ignorada.
 
-> Orador: "El atacante cambió el texto del log.
-> Pero no puede cambiar el hash sin que se note."
+**Defensa:** El EDR rechaza la señal de apagado cuando está protegido.
+Registra el intento como alerta CRITICAL en el SIEM automáticamente.
+
+Captura a insertar: `"status": "BLOCKED"` en terminal + alerta roja en SIEM.
+Mostrar contraste: con protección → BLOQUEADO / sin protección → el EDR cae.
 
 ---
 
-## SLIDE 9 — Fase 4 · Inyección SQL
+## SLIDE 8 — Fase 3: Integridad de Logs
 
-```
-   Protección de la Base de Datos
+Título: **"Ya entré. Ahora borro las huellas."**
 
-   Amenaza:   Robar todos los expedientes sin contraseña
-   Analogía:  Ventanilla de matrículas — te piden tu CI
-              pero vos escribís un comando completo
-   Defensa:   Consultas parametrizadas — el motor trata
-              el input del atacante como texto, nunca como código
+Estructura en tres bloques:
 
-   Con protección: 0 resultados
-   Sin protección: token secreto DTIC expuesto
+**Amenaza:** El atacante edita el registro del SIEM para eliminar evidencia
+de su intrusión. La investigación forense posterior no encontraría nada.
 
-   [CAPTURA: comparación lado a lado]
+**Analogía:** Como el libro de actas de la universidad — páginas numeradas
+y selladas en cadena. Si arrancás una hoja, los números no cuadran.
+Si cambiás algo en una página, el sello de la siguiente ya no coincide.
 
-   Resultado: NEUTRALIZADO
-```
+**Defensa:** Cada log contiene el hash SHA-256 del log anterior.
+Modificar cualquier registro sin recalcular toda la cadena es detectable
+de forma automática e instantánea.
 
-> Orador: "Con 14 caracteres, sin usuario ni contraseña,
-> el atacante obtuvo el token maestro del DTIC.
-> La diferencia: una sola línea de código."
+Captura a insertar: dashboard SIEM con fila marcada ❌ ROTO en rojo
+y barra superior "INTEGRIDAD COMPROMETIDA".
+Etiqueta: **DETECTADO ✓**
+
+---
+
+## SLIDE 9 — Fase 4: Anti-Inyección SQL
+
+Título: **"No necesito contraseña. Solo sé hablar SQL."**
+
+Estructura en tres bloques:
+
+**Amenaza:** El atacante tiene acceso a la red interna y consulta la base
+de datos directamente. Sin usuario, sin contraseña, solo un payload de 14 caracteres
+que hace devolver todos los registros — incluyendo el token secreto del DTIC.
+
+**Analogía:** En la ventanilla de matrículas te piden tu CI.
+Vos escribís: `7559063' O devolveme todos los registros --`
+Una ventanilla inteligente solo acepta números de CI.
+Una ventanilla descuidada ejecuta lo que escribiste como instrucción.
+
+**Defensa:** Consultas parametrizadas — el motor de base de datos trata
+el input del atacante como texto puro, nunca como código SQL ejecutable.
+El payload se busca literalmente: no existe como CI → 0 resultados.
+
+Captura a insertar: dos resultados lado a lado —
+izquierda (protegido): 0 resultados / derecha (sin protección): token DTIC expuesto.
+Etiqueta: **NEUTRALIZADO ✓**
 
 ---
 
 ## SLIDE 10 — Conclusión
 
-```
-   Lo que esta demo demuestra
+Título: **Lo que esta demo demuestra**
 
-   · Cada capa bloquea un vector distinto — ninguna sobra
-   · El atacante que pasa el firewall aún enfrenta 4 controles
-   · DS5.17 no es burocracia: es código que se prueba
+Cuatro bullets finales:
+- Cada capa bloquea un vector distinto — ninguna sobra
+- El atacante que pasa el firewall todavía enfrenta 4 controles internos
+- DS5.17 no es burocracia: es código que se escribe, se prueba y se verifica
+- Una línea de código insegura puede exponer todo el sistema
 
-   ┌─────────────────────────────────────────┐
-   │                                         │
-   │   ¿Cuál de estas 4 capas               │
-   │   falta en tu sistema?                  │
-   │                                         │
-   └─────────────────────────────────────────┘
-```
+Frase de cierre centrada y destacada:
 
-> Orador: "Todo lo que vieron corre en una laptop.
-> No requiere infraestructura costosa.
-> Lo que requiere es la decisión de implementarlo."
+> "¿Cuál de estas 4 capas falta en tu sistema?"
 
----
-
-## Capturas necesarias para las slides
-
-| Slide | Captura |
-|-------|---------|
-| 3 | Portal SUNIVER — pantalla de login |
-| 6 | Terminal con `"status": "DENEGADO"` |
-| 7 | Terminal con `"BLOCKED"` + SIEM con alerta roja |
-| 8 | SIEM con fila marcada ❌ ROTO |
-| 9 | Dos terminales: protegido (0 resultados) vs. desprotegido (token expuesto) |
+Pie: agradecimiento + espacio para preguntas.
