@@ -17,14 +17,26 @@ Imagen de fondo: escudo digital con circuitos (ya proporcionada).
 
 ---
 
-## SLIDE 2 — El control DS5.17
+## SLIDE 2 — ¿Qué es DS5.17?
 
-Muestra esta cita centrada en pantalla, tipografía grande, como elemento principal:
+Título: **COBIT DS5.17 — ¿De qué estamos hablando?**
 
+Explicar en pantalla en este orden:
+
+**¿Qué es COBIT?**
+Marco internacional de gobierno de TI usado por organizaciones y auditores
+para controlar y gestionar la seguridad de los sistemas de información.
+
+**¿Qué es DS5.17 dentro de COBIT?**
+Es el control específico llamado "Protección de las Funciones de Seguridad".
+Define que los propios mecanismos de seguridad de un sistema
+deben estar protegidos contra manipulación, desactivación o evasión.
+
+Cita centrada destacada:
 > "Los mecanismos de seguridad deben protegerse a sí mismos."
 > — COBIT DS5.17
 
-Debajo, tres bullets cortos:
+Tres bullets cortos debajo:
 - No alcanza con tener antivirus — hay que proteger el antivirus
 - No alcanza con tener logs — hay que garantizar que no se falsifiquen
 - No alcanza con tener base de datos — hay que proteger cómo se consulta
