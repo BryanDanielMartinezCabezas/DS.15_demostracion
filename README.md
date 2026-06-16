@@ -1,6 +1,6 @@
 # Demo DS5.17 COBIT — Defensa en Profundidad
 
-Demo de 15 minutos para conferencia universitaria. Simula 3 capas de defensa en una red Docker local.
+Demo de 15 minutos para conferencia universitaria. Simula 4 capas de defensa en una red Docker local.
 
 ---
 
@@ -11,13 +11,15 @@ Demo de 15 minutos para conferencia universitaria. Simula 3 capas de defensa en 
 ├── 172.29.0.10  attacker  (Kali Linux)
 ├── 172.29.0.20  victim    (Ubuntu · EDR Agent :8000)
 ├── 172.29.0.30  siem      (Flask · Dashboard :5601)
-└── 172.29.0.40  admin     (Flask · Panel Admin :8080)
+├── 172.29.0.40  admin     (Flask · Panel Admin :8080)
+└── 172.29.0.60  database  (Flask + SQLite · API :5050)
 ```
 
 | Servicio | URL local              | Descripción                        |
 |----------|------------------------|------------------------------------|
 | SIEM     | http://localhost:5601  | Dashboard de logs + hash chain     |
 | Admin    | http://localhost:8080  | Panel admin protegido con MFA      |
+| Database | http://localhost:5050  | API REST sobre SQLite (capa de datos) |
 
 ---
 
@@ -160,6 +162,41 @@ docker exec attacker bash /scripts/attack_phase3.sh
 
 ---
 
+## FASE 4 — Inyección SQL: Protección de la Capa de Base de Datos
+
+**Objetivo:** Mostrar que, incluso con acceso de red al motor de datos, un atacante no puede robar información sin credenciales si la capa de datos usa consultas parametrizadas.
+
+### Parte A — Con protección activa (defensa, por defecto)
+
+```powershell
+docker exec attacker bash /scripts/attack_phase4.sh
+```
+
+**Qué verá la audiencia:**
+- Una consulta legítima (`username=soporte`) devuelve 1 registro
+- El payload `' OR '1'='1` se trata como texto literal — no devuelve registros adicionales
+- El SIEM registra un evento `WARNING` (`SQLI_BLOCKED`) con la IP atacante y el payload
+
+### Parte B — Sin protección (demostrar el riesgo)
+
+1. En el panel admin (http://localhost:8080), en la tarjeta **"Capa de Base de Datos"**, hacer clic en **"Desactivar"**
+2. Volver a ejecutar el script de ataque:
+   ```powershell
+   docker exec attacker bash /scripts/attack_phase4.sh
+   ```
+3. Esta vez la consulta se construye concatenando el payload — `' OR '1'='1` vuelve siempre verdadero
+   y la API devuelve **todos** los registros, incluida la nota confidencial del usuario `admin`
+   (clave maestra del EDR). El SIEM registra el evento como `CRITICAL` (`SQLI_SUCCESS`)
+
+Para restaurar la protección:
+```powershell
+# Panel admin → Capa de Base de Datos → Activar Protección
+```
+
+**Mensaje clave:** *"La red interna y el firewall no bastan: si la base de datos arma sus consultas concatenando texto del atacante, cualquiera con acceso de red puede volcar toda la tabla. Las consultas parametrizadas (prepared statements) son la defensa que neutraliza la inyección en el propio motor de datos."*
+
+---
+
 ## Comandos útiles durante la demo
 
 ```powershell
@@ -167,6 +204,7 @@ docker exec attacker bash /scripts/attack_phase3.sh
 docker compose logs -f siem
 docker compose logs -f victim
 docker compose logs -f admin
+docker compose logs -f database
 
 # Reiniciar un servicio (ej. victim después de detenerlo en Fase 2)
 docker compose up -d victim
@@ -201,5 +239,6 @@ docker compose down
 | 1    | Autenticación MFA | TOTP (pyotp) | Acceso al panel de administración |
 | 2    | Tamper Protection | Flag + alerta SIEM | Integridad del agente EDR |
 | 3    | Integridad de logs | Hash chain SHA-256 | Evidencia forense y auditoría |
+| 4    | Anti-inyección SQL | Consultas parametrizadas | Confidencialidad de la base de datos |
 
 Cada capa es independiente: si una falla, las otras siguen activas.

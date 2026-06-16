@@ -1,4 +1,3 @@
-import os
 import pyotp
 import requests
 from datetime import datetime
@@ -8,14 +7,15 @@ from flask import (
 )
 
 app = Flask(__name__)
-app.secret_key = "demo-ds517-fixed-key"  # fijo para que las sesiones sobrevivan reinicios
+app.secret_key = "demo-ds517-fixed-key"
 
 USERNAME = "admin"
 PASSWORD = "Segur1dad!"
-TOTP_SECRET = "JBSWY3DPEHPK3PXP"  # base32; escanear QR del README
+TOTP_SECRET = "JBSWY3DPEHPK3PXP"
 
 VICTIM_URL = "http://victim:8000"
 SIEM_URL = "http://siem:5601"
+DATABASE_URL = "http://database:5050"
 
 
 # ──────────────────────────────── HTML ────────────────────────────────
@@ -24,7 +24,7 @@ LOGIN_HTML = """<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Admin Login — DS5.17</title>
+<title>Consola de Seguridad SUNIVER — DS5.17</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
@@ -73,8 +73,8 @@ LOGIN_HTML = """<!DOCTYPE html>
 <body>
 <div class="card">
   <div class="logo">
-    <h1>&#x1F512; Panel de Administración</h1>
-    <p>Demo DS5.17 COBIT &middot; Defensa en Profundidad</p>
+    <h1>&#x1F512; Consola de Seguridad</h1>
+    <p>Acceso restringido &middot; Solo personal DTIC</p>
   </div>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   <form method="POST" action="/login">
@@ -102,7 +102,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel Admin — DS5.17</title>
+<title>Consola de Seguridad — SUNIVER</title>
 <meta http-equiv="refresh" content="10">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -180,6 +180,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   }
   .siem-link:hover { background:rgba(31,111,235,.25); }
 
+  .suniver-link {
+    display:block; text-align:center; padding:14px;
+    background:rgba(41,128,185,.12); border:1px solid #2980b9;
+    border-radius:8px; color:#85c1e9; text-decoration:none;
+    font-weight:600; font-size:0.92rem; transition:background .2s; margin-top:10px;
+  }
+  .suniver-link:hover { background:rgba(41,128,185,.25); }
+
   .toast {
     display:none; position:fixed; bottom:24px; right:24px;
     background:#161b22; border:1px solid #30363d;
@@ -192,11 +200,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <body>
 <div class="header">
   <div>
-    <h1>&#x1F6E1;&#xFE0F; Panel de Administración — EDR</h1>
-    <div class="meta">Demo DS5.17 COBIT &middot; Actualizado: {{ now }}</div>
+    <h1>&#x1F6E1;&#xFE0F; Consola de Seguridad — SUNIVER</h1>
+    <div class="meta">DS5.17 COBIT &middot; Defensa en Profundidad &middot; Actualizado: {{ now }}</div>
   </div>
   <div class="header-right">
-    <span class="user-badge">&#x1F464; admin (MFA verificado)</span>
+    <span class="user-badge">&#x1F464; admin DTIC (MFA verificado)</span>
     <a href="/logout" class="logout">Cerrar sesión</a>
   </div>
 </div>
@@ -204,9 +212,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <div class="main">
   <div class="grid">
 
-    <!-- Estado del EDR -->
+    <!-- Servidor SUNIVER (EDR) -->
     <div class="card">
-      <div class="card-title">&#x1F4BB; Estado del EDR Agent</div>
+      <div class="card-title">&#x1F4BB; Servidor SUNIVER (EDR Agent)</div>
       <div class="edr-status">
         {% if edr.status == 'running' %}
           <span class="big-icon">&#x2705;</span>
@@ -215,7 +223,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <span class="big-icon">&#x1F6AB;</span>
           <div class="status-text down">{{ edr.status|upper }}</div>
         {% endif %}
-        <div class="host">victim &mdash; 172.29.0.20:8000</div>
+        <div class="host">servidor-suniver &mdash; 172.29.0.20:8000</div>
       </div>
 
       <div class="protection-section">
@@ -234,17 +242,17 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <button class="btn-toggle btn-disable" onclick="setProtection(false)">&#x1F513; Desactivar</button>
         {% else %}
           <div class="protection-badge off">
-            <span class="dot red"></span> EDR no disponible
+            <span class="dot red"></span> Servidor no disponible
           </div>
         {% endif %}
       </div>
     </div>
 
-    <!-- Información del Sistema -->
+    <!-- Sistema SUNIVER -->
     <div class="card">
-      <div class="card-title">&#x2139;&#xFE0F; Información del Sistema</div>
+      <div class="card-title">&#x2139;&#xFE0F; Sistema SUNIVER</div>
       <div class="info-row">
-        <span class="key">EDR Agent</span>
+        <span class="key">Servidor (EDR Agent)</span>
         <span class="val {{ 'ok' if edr.status == 'running' else 'fail' }}">
           {{ edr.status|upper }}
         </span>
@@ -256,15 +264,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </span>
       </div>
       <div class="info-row">
-        <span class="key">Versión agente</span>
+        <span class="key">Agente de seguridad</span>
         <span class="val">{{ edr.get('agent', 'EDR-Agent v1.0') }}</span>
       </div>
       <div class="info-row">
-        <span class="key">Red</span>
+        <span class="key">Red SUNIVER</span>
         <span class="val">172.29.0.0/24</span>
       </div>
       <div class="info-row">
-        <span class="key">Autenticación</span>
+        <span class="key">Autenticación consola</span>
         <span class="val ok">MFA-TOTP &#x2714;</span>
       </div>
       <div class="info-row">
@@ -273,11 +281,57 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- SIEM -->
+    <!-- Base de Datos SUNIVER -->
     <div class="card" style="grid-column:1/-1">
-      <div class="card-title">&#x1F4CA; Centro de Operaciones de Seguridad (SIEM)</div>
+      <div class="card-title">&#x1F5C4;&#xFE0F; Base de Datos SUNIVER (SQLite)</div>
+      <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
+        <div style="flex:1; min-width:220px;">
+          {% if db.protected %}
+            <div class="protection-badge on">
+              <span class="dot green"></span> Anti-Inyección SQL: ACTIVA
+            </div>
+          {% else %}
+            <div class="protection-badge off">
+              <span class="dot red"></span> Anti-Inyección SQL: DESACTIVADA
+            </div>
+          {% endif %}
+          <br>
+          <button class="btn-toggle btn-enable"  onclick="setDbProtection(true)">&#x1F512; Activar Protección</button>
+          <button class="btn-toggle btn-disable" onclick="setDbProtection(false)">&#x1F513; Desactivar</button>
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <div class="info-row">
+            <span class="key">Modo de consulta</span>
+            <span class="val {{ 'ok' if db.protected else 'fail' }}">
+              {{ 'Parametrizada' if db.protected else 'Concatenación directa' }}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="key">Registros de estudiantes</span>
+            <span class="val">{{ db.get('total_records', 'N/A') }}</span>
+          </div>
+          <div class="info-row">
+            <span class="key">Intentos de inyección</span>
+            <span class="val">{{ db.get('injection_attempts', 0) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="key">Inyecciones exitosas</span>
+            <span class="val {{ 'fail' if db.get('injection_successes', 0) > 0 else 'ok' }}">
+              {{ db.get('injection_successes', 0) }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIEM + Portal -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-title">&#x1F4CA; SIEM &mdash; Monitoreo de Seguridad SUNIVER</div>
       <a href="http://localhost:5601" target="_blank" class="siem-link">
         &#x1F517; Abrir Dashboard SIEM &rarr; localhost:5601
+      </a>
+      <a href="http://localhost:7000" target="_blank" class="suniver-link">
+        &#x1F393; Abrir Portal Estudiantil SUNIVER &rarr; localhost:7000
       </a>
     </div>
 
@@ -285,7 +339,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 </div>
 
 <div class="toast" id="toast"></div>
-<footer>Demo Académica &middot; COBIT DS5.17 &middot; Defensa en Profundidad</footer>
+<footer>Demo Académica &middot; COBIT DS5.17 &middot; USFX &middot; Defensa en Profundidad</footer>
 
 <script>
 function setProtection(enabled) {
@@ -296,10 +350,24 @@ function setProtection(enabled) {
   })
   .then(r => r.json())
   .then(data => {
-    showToast(enabled ? '&#x1F512; Protección ACTIVADA' : '&#x1F513; Protección DESACTIVADA');
+    showToast(enabled ? '&#x1F512; Tamper Protection ACTIVADA' : '&#x1F513; Tamper Protection DESACTIVADA');
     setTimeout(() => location.reload(), 1500);
   })
-  .catch(() => showToast('Error al conectar con el EDR'));
+  .catch(() => showToast('Error al conectar con el servidor SUNIVER'));
+}
+
+function setDbProtection(enabled) {
+  fetch('/set-db-protection', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({enabled})
+  })
+  .then(r => r.json())
+  .then(data => {
+    showToast(enabled ? '&#x1F512; Protección SQL ACTIVADA' : '&#x1F513; Protección SQL DESACTIVADA');
+    setTimeout(() => location.reload(), 1500);
+  })
+  .catch(() => showToast('Error al conectar con la Base de Datos SUNIVER'));
 }
 
 function showToast(msg) {
@@ -348,7 +416,6 @@ def login():
 
 @app.route("/login-api", methods=["POST"])
 def login_api():
-    """Endpoint JSON para los scripts de demo de la Fase 1."""
     data = request.json or {}
     username = data.get("username", "")
     password = data.get("password", "")
@@ -386,7 +453,7 @@ def login_api():
     return jsonify(
         {
             "status": "CONCEDIDO",
-            "mensaje": "Autenticación MFA exitosa. Acceso al panel de administración.",
+            "mensaje": "Autenticación MFA exitosa. Acceso a la Consola de Seguridad SUNIVER.",
             "usuario": username,
         }
     )
@@ -403,9 +470,16 @@ def dashboard():
     except Exception:
         edr = {"status": "unreachable", "protection": False, "agent": "N/A"}
 
+    try:
+        r2 = requests.get(f"{DATABASE_URL}/status", timeout=2)
+        db = r2.json()
+    except Exception:
+        db = {"protected": False, "total_records": "N/A", "injection_attempts": 0, "injection_successes": 0}
+
     return render_template_string(
         DASHBOARD_HTML,
         edr=edr,
+        db=db,
         now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     )
 
@@ -422,6 +496,18 @@ def set_protection():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/set-db-protection", methods=["POST"])
+def set_db_protection():
+    if "logged_in" not in session:
+        return jsonify({"error": "No autorizado"}), 401
+    enabled = (request.json or {}).get("enabled", True)
+    try:
+        r = requests.post(f"{DATABASE_URL}/protection", json={"enabled": enabled}, timeout=3)
+        return r.json()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -429,7 +515,7 @@ def logout():
 
 
 if __name__ == "__main__":
-    print(f"[Admin] Panel iniciado en puerto 8080", flush=True)
+    print("[Admin] Consola de Seguridad SUNIVER iniciada en puerto 8080", flush=True)
     print(f"[Admin] TOTP secret: {TOTP_SECRET}", flush=True)
     print(
         f"[Admin] Código actual: "

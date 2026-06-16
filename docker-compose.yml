@@ -18,7 +18,8 @@ services:
       - ./attacker:/scripts
     tty: true
     stdin_open: true
-    command: /bin/bash
+    # Se instalan curl y python3 automáticamente para que los scripts de ataque funcionen
+    command: /bin/bash -c "apt-get update -qq && apt-get install -y curl python3 >/dev/null 2>&1 && /bin/bash"
 
   siem:
     build: ./siem
@@ -44,6 +45,32 @@ services:
     tty: true
     stdin_open: true
 
+  suniver:
+    build: ./suniver
+    container_name: suniver
+    hostname: suniver
+    networks:
+      ds517net:
+        ipv4_address: 172.29.0.50
+    ports:
+      - "7000:7000"
+    tty: true
+    stdin_open: true
+
+  database:
+    build: ./database
+    container_name: database
+    hostname: database
+    networks:
+      ds517net:
+        ipv4_address: 172.29.0.60
+    ports:
+      - "5050:5050"
+    depends_on:
+      - siem
+    tty: true
+    stdin_open: true
+
   admin:
     build: ./admin
     container_name: admin
@@ -56,5 +83,6 @@ services:
     depends_on:
       - siem
       - victim
+      - database
     tty: true
     stdin_open: true
