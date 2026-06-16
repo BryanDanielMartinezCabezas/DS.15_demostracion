@@ -36,9 +36,9 @@ echo ""
 echo -e "${BOLD}[PASO 2]${RESET} Enviando señal de STOP al EDR Agent..."
 echo -e "${YELLOW}  → Simulando un atacante que intenta deshabilitar el antivirus/EDR...${RESET}"
 echo ""
-curl -s -X POST "${VICTIM_URL}/stop" \
-     | python3 -m json.tool 2>/dev/null || \
-  curl -s -X POST "${VICTIM_URL}/stop"
+STOP_RESPONSE=$(curl -s -X POST "${VICTIM_URL}/stop")
+echo "$STOP_RESPONSE" | python3 -m json.tool 2>/dev/null || echo "$STOP_RESPONSE"
+EDR_STATUS=$(echo "$STOP_RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null)
 echo ""
 
 # ── Verificar SIEM ────────────────────────────────────────────
@@ -57,16 +57,31 @@ for l in critical[-3:]:
 " 2>/dev/null || echo "  (Ver dashboard SIEM en http://localhost:5601)"
 echo ""
 
-# ── Resultado ────────────────────────────────────────────────
-echo -e "${BOLD}${RED}╔═══════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${RED}║  RESULTADO: EDR PROTEGIDO — ATAQUE BLOQUEADO Y REGISTRADO ║${RESET}"
-echo -e "${BOLD}${RED}╚═══════════════════════════════════════════════════════════╝${RESET}"
-echo ""
-echo -e "${GREEN}  DEFENSA ACTIVA:${RESET} Tamper Protection interceptó el intento de"
-echo -e "  detener el EDR. El evento CRITICAL quedó registrado en el"
-echo -e "  SIEM con la IP atacante y la marca de tiempo."
-echo ""
-echo -e "  ${CYAN}→ Ver alerta en http://localhost:5601${RESET}"
-echo -e "  ${CYAN}→ Para demostrar sin protección: usar el panel admin${RESET}"
-echo -e "     ${CYAN}http://localhost:8080 → Desactivar protección → volver a ejecutar${RESET}"
+# ── Resultado — depende del status real de la respuesta ──────
+if [ "$EDR_STATUS" = "BLOCKED" ]; then
+  echo -e "${BOLD}${GREEN}╔═══════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${BOLD}${GREEN}║  RESULTADO: EDR PROTEGIDO — ATAQUE BLOQUEADO Y REGISTRADO ║${RESET}"
+  echo -e "${BOLD}${GREEN}╚═══════════════════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "${GREEN}  DEFENSA ACTIVA:${RESET} Tamper Protection interceptó el intento."
+  echo -e "  El EDR sigue corriendo. El evento CRITICAL quedó registrado"
+  echo -e "  en el SIEM con la IP atacante y la marca de tiempo."
+  echo ""
+  echo -e "  ${CYAN}→ Ver alerta en http://localhost:5601${RESET}"
+  echo -e "  ${CYAN}→ Para demostrar sin protección: panel admin → Desactivar → volver a ejecutar${RESET}"
+elif [ "$EDR_STATUS" = "STOPPED" ]; then
+  echo -e "${BOLD}${RED}╔═══════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${BOLD}${RED}║  RESULTADO: EDR DETENIDO — SISTEMA SIN PROTECCIÓN         ║${RESET}"
+  echo -e "${BOLD}${RED}╚═══════════════════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "${RED}  SIN PROTECCIÓN:${RESET} Tamper Protection estaba desactivada."
+  echo -e "  El EDR fue detenido por el atacante. El endpoint ya no"
+  echo -e "  tiene protección activa. El SIEM registró AGENT_STOPPED como CRITICAL."
+  echo ""
+  echo -e "  ${CYAN}→ Para restaurar: docker compose up -d victim${RESET}"
+  echo -e "  ${CYAN}→ Luego reactivar protección en http://localhost:8080${RESET}"
+else
+  echo -e "${BOLD}${YELLOW}  RESULTADO: respuesta inesperada del EDR — revisar estado manualmente${RESET}"
+  echo -e "  ${CYAN}→ http://localhost:8080${RESET}"
+fi
 echo ""
