@@ -18,13 +18,14 @@ Deben aparecer 6 contenedores con estado "running".
 
 ---
 
-## PASO 1 — Abrir estos 3 navegadores/pestañas
+## PASO 1 — Abrir estos 4 navegadores/pestañas
 
 | URL | Qué es |
 |-----|--------|
 | http://localhost:8080 | Panel Admin (Consola de Seguridad) |
 | http://localhost:5601 | SIEM (dashboard de alertas) |
 | http://localhost:7000 | Portal SUNIVER |
+| http://localhost:9999 | Panel Atacante (Kali Linux) |
 
 ---
 
@@ -53,11 +54,17 @@ python -c "import pyotp; print(pyotp.TOTP('JBSWY3DPEHPK3PXP').now())"
 ⚠ El código expira en 30 segundos — ingresarlo rápido.
 
 ### Portal SUNIVER — localhost:7000
-```
-CI:         cualquier número (ej: 7559063)
-Contraseña: cualquier texto (ej: 123456)
-```
-No tiene autenticación real — es la réplica visual.
+
+Solo entran CIs registrados en la base de datos:
+
+| CI      | Nombre               | Carrera                        | Contraseña   |
+|---------|----------------------|--------------------------------|--------------|
+| 1234567 | Carlos Mamani López  | Medicina                       | cualquier texto |
+| 7654321 | María Condori Vargas | Derecho                        | cualquier texto |
+| 5678901 | Ana Quispe Flores    | Ing. en Ciencias de la Computación | cualquier texto |
+
+La contraseña no se valida — solo importa que el CI exista en la BD.
+Si ponés un CI que no existe, SUNIVER muestra error "CI no encontrado".
 
 ---
 

@@ -1,9 +1,12 @@
+import requests as http
 from flask import Flask, request, redirect, url_for, session
 
 app = Flask(__name__)
 app.secret_key = "suniver-demo-ds517-usfx"
 
-# ── Shared layout CSS ────────────────────────────────────────────────────────
+DB_URL = "http://database:5050"
+
+# ── CSS ──────────────────────────────────────────────────────────────────────
 _CSS = """
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:100vh; }
@@ -35,7 +38,7 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
 .avatar {
   width:44px; height:44px; border-radius:50%;
   background:#ccc; display:flex; align-items:center; justify-content:center;
-  font-size:1.5rem; flex-shrink:0; overflow:hidden;
+  font-size:1.5rem; flex-shrink:0;
 }
 .profile-info { font-size:0.77rem; }
 .profile-name { font-weight:700; color:#333; margin-bottom:2px; }
@@ -59,33 +62,25 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
 .nav-sub { list-style:none; background:#fafafa; border-top:1px solid #f0f0f0; }
 .sub-link {
   display:block; padding:7px 14px 7px 34px;
-  font-size:0.79rem; color:#555; text-decoration:none;
-  transition:color .15s;
+  font-size:0.79rem; color:#555; text-decoration:none; transition:color .15s;
 }
 .sub-link:hover { color:#f5a01a; }
 .sub-link.active { color:#f5a01a; font-weight:600; }
 .sub-link.off { color:#ccc; cursor:default; pointer-events:none; }
 
 .main { margin-left:222px; flex:1; padding:22px 28px 40px; }
-
-.breadcrumb {
-  text-align:right; font-size:0.74rem; color:#aaa; margin-bottom:14px;
-}
+.breadcrumb { text-align:right; font-size:0.74rem; color:#aaa; margin-bottom:14px; }
 .breadcrumb .bc-active { color:#f5a01a; }
 
 .page-h1 { font-size:1.3rem; font-weight:600; color:#333; margin-bottom:6px; }
 .page-sub { font-size:0.85rem; color:#888; font-weight:600; margin-bottom:18px; letter-spacing:.03em; }
 
-.card {
-  background:#fff; border-radius:2px;
-  box-shadow:0 1px 3px rgba(0,0,0,.09); margin-bottom:18px;
-}
+.card { background:#fff; border-radius:2px; box-shadow:0 1px 3px rgba(0,0,0,.09); margin-bottom:18px; }
 .card-header {
   border-top:3px solid #00bcd4; padding:10px 16px;
   font-size:0.88rem; font-weight:600; color:#444;
   display:flex; justify-content:space-between; align-items:center;
 }
-.card-close { color:#ccc; font-size:.8rem; cursor:pointer; }
 .card-body { padding:16px 18px; }
 
 .info-table { width:100%; border-collapse:collapse; font-size:0.84rem; }
@@ -99,10 +94,7 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
   padding:6px 20px; border:1px solid #ddd; background:#f7f7f7;
   font-size:0.79rem; color:#666; cursor:pointer;
 }
-.tab.active {
-  background:#fff; border-bottom:2px solid #00bcd4;
-  color:#00bcd4; font-weight:600;
-}
+.tab.active { background:#fff; border-bottom:2px solid #00bcd4; color:#00bcd4; font-weight:600; }
 
 .grade-wrap { overflow-x:auto; }
 .grade-table { width:100%; border-collapse:collapse; font-size:0.74rem; white-space:nowrap; }
@@ -110,14 +102,10 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
   background:#eef3f8; padding:7px 5px; text-align:center;
   color:#555; font-weight:600; border:1px solid #dde4ec; font-size:0.69rem;
 }
-.grade-table td {
-  padding:8px 5px; text-align:center;
-  border:1px solid #eee; color:#333;
-}
-.grade-table td.asig { text-align:left; padding-left:10px; white-space:normal; min-width:140px; }
+.grade-table td { padding:8px 5px; text-align:center; border:1px solid #eee; color:#333; }
+.grade-table td.asig { text-align:left; padding-left:10px; white-space:normal; min-width:160px; }
 .grade-table tr:hover td { background:#fffcf5; }
 .gr { color:#e53935; font-weight:600; }
-.gb { color:#1565c0; font-weight:600; }
 
 .notes-box { font-size:0.72rem; color:#e53935; margin:10px 0 16px; line-height:1.8; }
 
@@ -157,54 +145,6 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; min-height:
 .cron-date { font-size:0.71rem; color:#888; margin-top:3px; line-height:1.6; }
 """
 
-# ── USFX shield SVG (inline, reusable) ──────────────────────────────────────
-_SHIELD_SVG = """<svg width="44" height="44" viewBox="0 0 52 52">
-  <path d="M26 4 L46 13 L46 30 C46 40 37 47 26 49 C15 47 6 40 6 30 L6 13 Z"
-        fill="#003366" stroke="#c8a800" stroke-width="2.5"/>
-  <text x="26" y="22" text-anchor="middle" fill="#c8a800"
-        font-size="5.5" font-family="serif" font-weight="bold">U.S.F.X.</text>
-  <text x="26" y="32" text-anchor="middle" fill="#fff" font-size="4.5" font-family="serif">Chuquisaca</text>
-  <text x="26" y="41" text-anchor="middle" fill="#fff" font-size="4" font-family="serif">Bolivia</text>
-</svg>"""
-
-# ── Sidebar (shared) ─────────────────────────────────────────────────────────
-def _sidebar(active):
-    li = lambda href, label, cls="": f'<li><a href="{href}" class="sub-link {cls}">{label}</a></li>'
-    libreta_cls = "active" if active == "libreta" else ""
-    return f"""
-<div class="sidebar">
-  <div class="sidebar-profile">
-    <div class="avatar">&#128100;</div>
-    <div class="profile-info">
-      <div class="profile-name">Estudiante Demo</div>
-      <div class="profile-carrera">ING. EN CIENCIAS DE LA COMPU</div>
-      <a href="/logout" class="logout-link">&#10548; Cerrar sesi&oacute;n</a>
-    </div>
-  </div>
-  <div class="nav-label">Navegaci&oacute;n Principal</div>
-  <ul class="nav-list">
-    <li><a href="#" class="nav-link">&#128193; Matr&iacute;culas <span class="nav-caret">&#8249;</span></a></li>
-    <li><a href="#" class="nav-link">&#128197; Programaciones <span class="nav-caret">&#8249;</span></a></li>
-    <li>
-      <a href="#" class="nav-link active-parent">&#9998; Calificaciones <span class="nav-caret">&#8964;</span></a>
-      <ul class="nav-sub">
-        {li('#', '&#9675; Mi Kardex', 'off')}
-        {li('/libreta', '&#9675; Mi Libreta', libreta_cls)}
-        {li('#', '&#9675; Mi Cuaderno de Trabajo', 'off')}
-      </ul>
-    </li>
-    <li><a href="#" class="nav-link">&#127760; Campus Virtual</a></li>
-    <li><a href="#" class="nav-link">&#127885; Becas <span class="nav-caret">&#8249;</span></a></li>
-    <li><a href="#" class="nav-link">&#128106; Rebaja de Hermanos</a></li>
-    <li><a href="#" class="nav-link">&#128203; Tr&aacute;mites</a></li>
-    <li><a href="#" class="nav-link">&#128214; Formularios</a></li>
-    <li><a href="#" class="nav-link">&#128270; Scopus</a></li>
-    <li><a href="#" class="nav-link">&#128203; Encuesta</a></li>
-  </ul>
-</div>"""
-
-
-# ── LOGIN ────────────────────────────────────────────────────────────────────
 LOGIN_HTML = """<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -229,6 +169,8 @@ LOGIN_HTML = """<!DOCTYPE html>
     border-radius:2px; cursor:pointer; font-size:.95rem; margin-top:6px; transition:background .2s; }
   .btn-ingresar:hover { background:#3498db; }
   .forgot { display:block; text-align:center; color:#2980b9; font-size:.8rem; text-decoration:none; margin-top:14px; }
+  .error-msg { color:#e74c3c; font-size:.82rem; text-align:center; margin-top:10px; padding:8px;
+    background:#fdf0f0; border:1px solid #f5c6cb; border-radius:2px; }
   .nota-red { color:#e74c3c; font-size:.76rem; text-align:center; margin-top:12px; line-height:1.55; }
   .logos { display:flex; justify-content:space-between; align-items:center; width:320px; margin-top:24px; padding:0 6px; }
   .demo-tag { position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
@@ -251,6 +193,7 @@ LOGIN_HTML = """<!DOCTYPE html>
       </div>
       <button type="submit" class="btn-ingresar">Ingresar</button>
     </form>
+    {error}
     <a href="#" class="forgot">&iquest;Olvi&oacute; su contrase&ntilde;a?</a>
     <p class="nota-red">
       Nota: El primer ingreso a SUNIVER, la contrase&ntilde;a es la fecha de nacimiento.<br>
@@ -274,8 +217,47 @@ LOGIN_HTML = """<!DOCTYPE html>
 </html>"""
 
 
-def _page(title, breadcrumb, content, active, ci):
-    sidebar = _sidebar(active)
+def _sidebar(active, nombre, carrera):
+    libreta_cls = "active" if active == "libreta" else ""
+    return f"""
+<div class="sidebar">
+  <div class="sidebar-profile">
+    <div class="avatar">&#128100;</div>
+    <div class="profile-info">
+      <div class="profile-name">{nombre}</div>
+      <div class="profile-carrera">{carrera.upper()}</div>
+      <a href="/logout" class="logout-link">&#10548; Cerrar sesi&oacute;n</a>
+    </div>
+  </div>
+  <div class="nav-label">Navegaci&oacute;n Principal</div>
+  <ul class="nav-list">
+    <li><a href="#" class="nav-link">&#128193; Matr&iacute;culas <span class="nav-caret">&#8249;</span></a></li>
+    <li><a href="#" class="nav-link">&#128197; Programaciones <span class="nav-caret">&#8249;</span></a></li>
+    <li>
+      <a href="#" class="nav-link active-parent">&#9998; Calificaciones <span class="nav-caret">&#8964;</span></a>
+      <ul class="nav-sub">
+        <li><a href="#" class="sub-link off">&#9675; Mi Kardex</a></li>
+        <li><a href="/libreta" class="sub-link {libreta_cls}">&#9675; Mi Libreta</a></li>
+        <li><a href="#" class="sub-link off">&#9675; Mi Cuaderno de Trabajo</a></li>
+      </ul>
+    </li>
+    <li><a href="#" class="nav-link">&#127760; Campus Virtual</a></li>
+    <li><a href="#" class="nav-link">&#127885; Becas <span class="nav-caret">&#8249;</span></a></li>
+    <li><a href="#" class="nav-link">&#128106; Rebaja de Hermanos</a></li>
+    <li><a href="#" class="nav-link">&#128203; Tr&aacute;mites</a></li>
+    <li><a href="#" class="nav-link">&#128214; Formularios</a></li>
+    <li><a href="#" class="nav-link">&#128270; Scopus</a></li>
+    <li><a href="#" class="nav-link">&#128203; Encuesta</a></li>
+  </ul>
+</div>"""
+
+
+def _page(title, breadcrumb, content, active):
+    st = session.get("student", {})
+    nombre  = st.get("nombre", "Estudiante")
+    carrera = st.get("carrera", "")
+    ci      = st.get("ci", "")
+    sidebar = _sidebar(active, nombre, carrera)
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -306,21 +288,23 @@ def _page(title, breadcrumb, content, active, ci):
 </html>"""
 
 
-# ── DASHBOARD ────────────────────────────────────────────────────────────────
-def render_dashboard(ci):
+def render_dashboard():
+    st = session.get("student", {})
+    nombre  = st.get("nombre", "Estudiante")
+    carrera = st.get("carrera", "")
     content = f"""
-<div class="page-h1">Bienvenido a Suniver, Estudiante Demo</div>
-<div class="page-sub">CARRERA DE ING. EN CIENCIAS DE LA COMPUTACI&Oacute;N</div>
+<div class="page-h1">Bienvenido a Suniver, {nombre}</div>
+<div class="page-sub">{carrera.upper()}</div>
 <div class="home-grid">
   <div>
     <div class="card">
-      <div class="card-header">Mis Mensajes <span class="card-close">&#8722; &times;</span></div>
-      <div class="card-body" style="min-height:60px;"></div>
+      <div class="card-header">Mis Mensajes</div>
+      <div class="card-body" style="min-height:60px;color:#aaa;font-size:.83rem;">Sin mensajes nuevos.</div>
     </div>
   </div>
   <div>
     <div class="card">
-      <div class="card-header">Cronograma Acad&eacute;mico <span class="card-close">&#8722; &times;</span></div>
+      <div class="card-header">Cronograma Acad&eacute;mico</div>
       <div class="card-body">
         <div class="cron-item">
           <div class="cron-icon">IMG</div>
@@ -332,19 +316,11 @@ def render_dashboard(ci):
         <div class="cron-item">
           <div class="cron-icon">IMG</div>
           <div>
-            <div class="cron-title">Programaciones</div>
-            <div class="cron-date">Del 2026-02-02 00:00:00<br>al 2026-04-02 12:00:00</div>
-          </div>
-        </div>
-        <div class="cron-item">
-          <div class="cron-icon">IMG</div>
-          <div>
             <div class="cron-title">Calificaciones</div>
             <div class="cron-date">
               1er Par.: 2026-04-18 23:59:00<br>
               2do. Par.: 2026-06-05 23:59:00<br>
-              Ex. Final: 2026-06-20 23:59:00<br>
-              2da. Instancia: 2026-06-27 23:59:00
+              Ex. Final: 2026-06-20 23:59:00
             </div>
           </div>
         </div>
@@ -352,25 +328,48 @@ def render_dashboard(ci):
     </div>
   </div>
 </div>"""
-    bc = 'Inicio &rsaquo; <span class="bc-active">ING. EN CIENCIAS DE LA COMPUTACI&Oacute;N</span>'
-    return _page("Inicio", bc, content, "home", ci)
+    bc = f'Inicio &rsaquo; <span class="bc-active">{carrera.upper()}</span>'
+    return _page("Inicio", bc, content, "home")
 
 
-# ── LIBRETA ──────────────────────────────────────────────────────────────────
-def render_libreta(ci):
+def render_libreta():
+    st    = session.get("student", {})
+    ci    = st.get("ci", "")
+    nombre = st.get("nombre", "")
+    carrera = st.get("carrera", "")
+    notas = st.get("notas", [])
+
+    rows_html = ""
+    for m in notas:
+        rows_html += f"""<tr>
+          <td>{m.get('cod','')}</td>
+          <td class="asig">{m.get('mat','')}</td>
+          <td>{m.get('curso','')}</td>
+          <td>{m.get('grupo','')}</td>
+          <td>{m.get('sea','')}</td>
+          <td class="gr">{m.get('p1','-')}</td>
+          <td class="gr">{m.get('p2','-')}</td>
+          <td>-</td>
+          <td class="gr">{m.get('np','-')}</td>
+          <td class="gr">{m.get('prac','-')}</td>
+          <td class="gr">{m.get('lab','-')}</td>
+          <td class="gr">{m.get('ns','-')}</td>
+          <td class="gr">{m.get('ef','-')}</td>
+          <td class="gr">{m.get('nf','-')}</td>
+          <td class="gr">0</td>
+          <td>-</td><td>-</td><td>-</td>
+        </tr>"""
+
     content = f"""
 <div class="page-h1">Libreta</div>
-<div class="card">
-  <div class="card-header">Mis Mensajes <span class="card-close">&#8722; &times;</span></div>
-  <div class="card-body" style="min-height:28px;"></div>
-</div>
 <div class="card">
   <div class="card-header">Datos del Universitario</div>
   <div class="card-body">
     <table class="info-table">
-      <tr><td>Carnet Universitario</td><td>DEM-2026</td></tr>
+      <tr><td>Carnet Universitario</td><td>USFX-2026</td></tr>
       <tr><td>Carnet de Identidad</td><td>{ci}</td></tr>
-      <tr><td>Universitario</td><td>Estudiante Demo &mdash; USFX</td></tr>
+      <tr><td>Universitario</td><td>{nombre}</td></tr>
+      <tr><td>Carrera</td><td>{carrera}</td></tr>
       <tr><td>Sistema</td><td>Semestralizado</td></tr>
     </table>
   </div>
@@ -383,7 +382,7 @@ def render_libreta(ci):
       <table class="grade-table">
         <thead>
           <tr>
-            <th rowspan="2">C&oacute;digo<br>Asignatura</th>
+            <th rowspan="2">C&oacute;digo</th>
             <th rowspan="2">Asignatura</th>
             <th rowspan="2">Curso</th>
             <th rowspan="2">Grupo</th>
@@ -395,86 +394,19 @@ def render_libreta(ci):
             <th rowspan="2">Nota<br>Semifinal</th>
             <th rowspan="2">Ex.<br>Final</th>
             <th rowspan="2">Nota<br>Final</th>
-            <th rowspan="2">Segunda<br>Inst.</th>
-            <th colspan="3">Examen Invierno/Verano</th>
+            <th rowspan="2">2da<br>Inst.</th>
+            <th colspan="3">Ex. Invierno/Verano</th>
           </tr>
-          <tr>
-            <th>1ro</th><th>2do</th><th>3er</th>
-            <th>1er Ex</th><th>2do Ex</th><th>Nota Final</th>
-          </tr>
+          <tr><th>1ro</th><th>2do</th><th>3er</th><th>1er Ex</th><th>2do Ex</th><th>Nota Final</th></tr>
         </thead>
         <tbody>
-          <tr>
-            <td>SIS330</td>
-            <td class="asig">DESARROLLO DE APLICACIONES INTELIGENTES</td>
-            <td>7</td><td>1</td><td>A</td>
-            <td class="gr">18</td><td class="gr">20</td><td>-</td>
-            <td class="gr">19.0</td><td class="gr">8</td><td class="gr">22</td>
-            <td class="gr">49.0</td><td class="gr">35</td><td class="gr">84</td>
-            <td class="gr">0</td><td>-</td><td>-</td><td>-</td>
-          </tr>
-          <tr>
-            <td>COM600</td>
-            <td class="asig">MICRO SERVICIOS</td>
-            <td>7</td><td>1</td><td>D</td>
-            <td class="gr">40</td><td class="gr">42</td><td>-</td>
-            <td class="gr">41.0</td><td class="gr">18</td><td class="gr">0</td>
-            <td class="gr">59.0</td><td class="gr">28</td><td class="gr">87</td>
-            <td class="gr">0</td><td>-</td><td>-</td><td>-</td>
-          </tr>
-          <tr>
-            <td>COM480</td>
-            <td class="asig">ROB&Oacute;TICA I</td>
-            <td>7</td><td>1</td><td>G</td>
-            <td class="gr">25</td><td class="gr">30</td><td>-</td>
-            <td class="gr">27.5</td><td class="gr">15</td><td class="gr">0</td>
-            <td class="gr">42.5</td><td class="gr">32</td><td class="gr">75</td>
-            <td class="gr">0</td><td>-</td><td>-</td><td>-</td>
-          </tr>
-          <tr>
-            <td>SIS254</td>
-            <td class="asig">SEGURIDAD DE LA INFORMACI&Oacute;N</td>
-            <td>7</td><td>1</td><td class="gb">I</td>
-            <td class="gr">22</td><td class="gr">24</td><td>-</td>
-            <td class="gr">23.0</td><td class="gr">9</td><td class="gr">20</td>
-            <td class="gr">52.0</td><td class="gr">30</td><td class="gr">82</td>
-            <td class="gr">0</td><td>-</td><td>-</td><td>-</td>
-          </tr>
-          <tr>
-            <td>SIS325</td>
-            <td class="asig">ADMINISTRACI&Oacute;N DE PROYECTOS DE SOFTWARE</td>
-            <td>8</td><td>1</td><td>G</td>
-            <td class="gr">30</td><td class="gr">28</td><td>-</td>
-            <td class="gr">29.0</td><td class="gr">14</td><td class="gr">0</td>
-            <td class="gr">43.0</td><td class="gr">34</td><td class="gr">77</td>
-            <td class="gr">0</td><td>-</td><td>-</td><td>-</td>
-          </tr>
+          {rows_html}
         </tbody>
       </table>
     </div>
     <div class="notes-box">
-      *Las Calificaciones en ROJO estan pendientes de validaci&oacute;n por parte del docente y estan sujetas a modificaci&oacute;n<br>
+      *Las Calificaciones en ROJO est&aacute;n pendientes de validaci&oacute;n por parte del docente<br>
       ** Las casillas con &ldquo;-&rdquo; no son tomadas en cuenta para las ponderaciones
-    </div>
-    <div class="sea-section">
-      <h3>CODIGOS DEL SISTEMA DE EVALUACI&Oacute;N ACAD&Eacute;MICA (SEA)</h3>
-      <table class="sea-table">
-        <thead>
-          <tr>
-            <th>C&oacute;digo</th>
-            <th>Prueba Parciales</th>
-            <th>Prueba Pr&aacute;cticas</th>
-            <th>Laboratorios</th>
-            <th>Prueba Final</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>A</td><td>25</td><td>10</td><td>25</td><td>40</td></tr>
-          <tr><td>D</td><td>50</td><td>20</td><td>0</td><td>30</td></tr>
-          <tr><td>G</td><td>40</td><td>20</td><td>0</td><td>40</td></tr>
-          <tr><td>I</td><td>30</td><td>10</td><td>25</td><td>35</td></tr>
-        </tbody>
-      </table>
     </div>
     <button class="btn-print">&#128424; Imprimir</button>
     <div class="suniver-footer">
@@ -486,24 +418,18 @@ def render_libreta(ci):
           <text x="26" y="31" text-anchor="middle" fill="#fff" font-size="4" font-family="serif">Chuquisaca</text>
           <text x="26" y="40" text-anchor="middle" fill="#fff" font-size="3.8" font-family="serif">Bolivia</text>
         </svg>
-        <svg width="80" height="32" viewBox="0 0 120 40">
-          <text x="4" y="28" font-family="cursive" font-size="22" fill="#1a5276" font-style="italic">dtic</text>
-          <text x="44" y="28" font-family="cursive" font-size="10" fill="#888">.usfx.info</text>
-        </svg>
       </div>
       <div class="footer-links">
         <a href="#">&#9993; dtic.soporte@usfx.bo</a>
         <a href="#">&#128172; Canal de Telegram</a>
-        <a href="#">&#128172; Grupo de Telegram</a>
       </div>
     </div>
   </div>
 </div>"""
-    bc = 'Inicio &rsaquo; ING. EN CIENCIAS DE LA COMPUTACI&Oacute;N &rsaquo; <span class="bc-active">Libreta</span>'
-    return _page("Libreta", bc, content, "libreta", ci)
+    bc = f'Inicio &rsaquo; {carrera.upper()} &rsaquo; <span class="bc-active">Libreta</span>'
+    return _page("Libreta", bc, content, "libreta")
 
 
-# ── Routes ───────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
     return redirect(url_for("login"))
@@ -514,23 +440,39 @@ def login():
     if request.method == "POST":
         ci = request.form.get("ci", "").strip()
         if ci:
-            session["ci"] = ci
-            return redirect(url_for("dashboard"))
-    return LOGIN_HTML
+            try:
+                resp = http.get(f"{DB_URL}/student", params={"ci": ci}, timeout=4)
+                data = resp.json()
+            except Exception:
+                data = {"found": False}
+
+            if data.get("found"):
+                session["student"] = {
+                    "ci":      data["ci"],
+                    "nombre":  data["nombre"],
+                    "carrera": data["carrera"],
+                    "notas":   data["notas"],
+                }
+                return redirect(url_for("dashboard"))
+            else:
+                error = '<p class="error-msg">&#10005; CI no encontrado en el sistema SUNIVER.</p>'
+                return LOGIN_HTML.replace("{error}", error)
+
+    return LOGIN_HTML.replace("{error}", "")
 
 
 @app.route("/dashboard")
 def dashboard():
-    if "ci" not in session:
+    if "student" not in session:
         return redirect(url_for("login"))
-    return render_dashboard(session["ci"])
+    return render_dashboard()
 
 
 @app.route("/libreta")
 def libreta():
-    if "ci" not in session:
+    if "student" not in session:
         return redirect(url_for("login"))
-    return render_libreta(session["ci"])
+    return render_libreta()
 
 
 @app.route("/logout")

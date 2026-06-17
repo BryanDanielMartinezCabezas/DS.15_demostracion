@@ -8,7 +8,7 @@ networks:
 services:
 
   attacker:
-    image: kalilinux/kali-rolling
+    build: ./attacker
     container_name: attacker
     hostname: attacker
     networks:
@@ -16,10 +16,13 @@ services:
         ipv4_address: 172.29.0.10
     volumes:
       - ./attacker:/scripts
-    tty: true
-    stdin_open: true
-    # Se instalan curl y python3 automáticamente para que los scripts de ataque funcionen
-    command: /bin/bash -c "apt-get update -qq && apt-get install -y curl python3 >/dev/null 2>&1 && /bin/bash"
+    ports:
+      - "9999:9999"
+    depends_on:
+      - siem
+      - victim
+      - database
+      - admin
 
   siem:
     build: ./siem

@@ -170,21 +170,24 @@ Título: **"No necesito contraseña. Solo sé hablar SQL."**
 
 Estructura en tres bloques:
 
-**Amenaza:** El atacante tiene acceso a la red interna y consulta la base
-de datos directamente. Sin usuario, sin contraseña, solo un payload de 14 caracteres
-que hace devolver todos los registros — incluyendo el token secreto del DTIC.
+**Amenaza:** La base de datos no contiene solo notas — contiene el Token API
+DTIC-SUNIVER: la credencial que autentica todos los sistemas internos entre sí.
+Un atacante con acceso a la red puede volcar toda la tabla con 14 caracteres de payload.
+Si ese token se expone, las otras tres capas de seguridad quedan sin valor.
 
 **Analogía:** En la ventanilla de matrículas te piden tu CI.
-Vos escribís: `7559063' O devolveme todos los registros --`
+Vos escribís: `' O devolveme todos los registros --`
 Una ventanilla inteligente solo acepta números de CI.
 Una ventanilla descuidada ejecuta lo que escribiste como instrucción.
 
-**Defensa:** Consultas parametrizadas — el motor de base de datos trata
-el input del atacante como texto puro, nunca como código SQL ejecutable.
-El payload se busca literalmente: no existe como CI → 0 resultados.
+**Defensa (DS5.17):** DS5.17 exige proteger no solo los mecanismos de seguridad
+sino también los datos de los que esos mecanismos dependen.
+Consultas parametrizadas garantizan que ningún input externo se ejecute como código SQL.
+El token DTIC — raíz de confianza del sistema — permanece protegido.
 
 Captura a insertar: dos resultados lado a lado —
-izquierda (protegido): 0 resultados / derecha (sin protección): token DTIC expuesto.
+izquierda (protegido): 0 resultados / derecha (sin protección): token DTIC expuesto
+junto a expedientes de 3 estudiantes de distintas carreras.
 Etiqueta: **NEUTRALIZADO ✓**
 
 ---
